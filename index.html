@@ -3,87 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Inventory Pro v2.2</title>
+    <title>Smart Inventory Pro - Barcode Ready</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Agar area kamera tidak kotak sempurna, tapi persegi panjang (cocok untuk barcode batang) */
+        #reader__scan_region { background: white ! stroke: #4f46e5; }
+        #reader video { object-fit: cover !important; }
+    </style>
 </head>
-<body class="bg-slate-50 min-h-screen pb-10 font-sans">
+<body class="bg-gray-100 min-h-screen pb-10 font-sans">
 
-    <div class="max-w-md mx-auto bg-white shadow-2xl min-h-screen flex flex-col">
+    <div class="max-w-md mx-auto bg-white shadow-xl min-h-screen p-6 relative">
+        <h1 class="text-2xl font-black mb-6 text-center text-indigo-600 flex items-center justify-center gap-2">
+            <span>📦</span> Inventory Master
+        </h1>
         
-        <header class="bg-indigo-600 p-6 text-white rounded-b-[2.5rem] shadow-lg text-center">
-            <h1 class="text-2xl font-black tracking-tighter flex items-center justify-center gap-2">
-                <span>📦</span> STOCK MASTER PRO
-            </h1>
-            <p class="text-indigo-100 text-[10px] mt-1 font-medium tracking-widest uppercase opacity-80">Inventory Management System</p>
-        </header>
-
-        <main class="p-6 flex-grow">
-            <div class="relative overflow-hidden rounded-[2rem] border-4 border-slate-100 mb-4 bg-slate-900 h-64 shadow-inner flex items-center justify-center">
-                <div id="reader" class="w-full h-full"></div>
-                <div id="scanner-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-white bg-slate-800 transition-all duration-500">
-                    <div class="w-20 h-20 bg-slate-700 rounded-full flex items-center justify-center mb-3 shadow-2xl animate-pulse">
-                        <span class="text-4xl text-indigo-400">📷</span>
-                    </div>
-                    <p class="text-xs font-bold opacity-40 tracking-widest uppercase">Kamera Siap</p>
-                </div>
+        <div class="relative overflow-hidden rounded-2xl border-4 border-indigo-100 mb-4 bg-black h-64 flex items-center justify-center shadow-inner">
+            <div id="reader" class="w-full h-full"></div>
+            <div id="scanner-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-white bg-slate-800 pointer-events-none transition-opacity duration-300">
+                <span class="text-5xl mb-3 animate-pulse">📷</span>
+                <p class="text-sm font-medium opacity-70 tracking-wide">SIAP MEMINDAI</p>
             </div>
+        </div>
 
-            <div class="flex gap-3 mb-8">
-                <button id="btn-start" onclick="startScanner()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-bold shadow-indigo-200 shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2">
-                    <span id="label-start">🔍 Mulai Scan</span>
-                </button>
-                <button id="btn-stop" onclick="stopScanner()" class="hidden flex-1 bg-rose-500 hover:bg-rose-600 text-white py-4 rounded-2xl font-bold shadow-rose-200 shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2">
-                    <span>⏹️ Berhenti</span>
-                </button>
-            </div>
+        <div class="flex gap-2 mb-6">
+            <button id="btn-start" onclick="startScanner()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-bold shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2">
+                🚀 Mulai Scan
+            </button>
+            <button id="btn-stop" onclick="stopScanner()" class="hidden flex-1 bg-rose-500 hover:bg-rose-600 text-white py-4 rounded-2xl font-bold shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2">
+                🛑 Berhenti
+            </button>
+        </div>
+        
+        <div id="info-box" class="p-5 bg-indigo-50 rounded-2xl mb-6 hidden border-2 border-indigo-200 shadow-sm animate-in fade-in duration-300">
+            <p class="text-[10px] text-indigo-500 font-black uppercase tracking-[0.2em] mb-1">Data Terdeteksi</p>
+            <input id="input-nama" type="text" placeholder="Ketik Nama Barang Baru..." class="w-full bg-transparent text-xl font-bold text-indigo-900 border-b-2 border-indigo-200 focus:outline-none focus:border-indigo-600 mb-2 py-1 transition-colors">
+            <p id="result-id" class="text-[11px] text-gray-400 font-mono bg-white inline-block px-2 py-0.5 rounded border border-gray-100"></p>
             
-            <div id="info-box" class="p-5 bg-indigo-50 rounded-[2rem] mb-8 hidden border-2 border-indigo-100 shadow-inner">
-                <div class="flex justify-between items-center mb-4">
-                    <span class="text-[10px] bg-indigo-200 text-indigo-700 px-3 py-1 rounded-full font-mono font-black" id="result-id">ID: -</span>
-                    <button onclick="closeInfoBox()" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+            <div class="flex items-center justify-between mt-6 bg-white p-4 rounded-xl shadow-sm border border-indigo-100">
+                <span class="text-sm font-bold text-gray-500 uppercase tracking-tight">Jumlah Stok</span>
+                <div class="flex items-center gap-4">
+                    <button onclick="updateStok(-1)" class="w-10 h-10 bg-rose-50 text-rose-600 rounded-full font-black text-xl hover:bg-rose-100">-</button>
+                    <span id="result-qty" class="text-3xl font-black text-slate-800 min-w-[40px] text-center">0</span>
+                    <button onclick="updateStok(1)" class="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-full font-black text-xl hover:bg-emerald-100">+</button>
                 </div>
-                
-                <label class="block text-[10px] font-black text-indigo-400 uppercase mb-1 ml-1 tracking-widest">Nama Barang</label>
-                <input id="input-nama" type="text" placeholder="Masukkan nama barang..." class="w-full bg-white text-lg font-bold text-slate-800 border-2 border-transparent focus:border-indigo-400 rounded-xl px-4 py-3 focus:outline-none mb-5 shadow-sm transition-all">
-                
-                <div class="flex items-center justify-between bg-white p-4 rounded-2xl shadow-sm border border-indigo-100 mb-5">
-                    <span class="text-sm font-bold text-slate-500">Jumlah Stok</span>
-                    <div class="flex items-center gap-5">
-                        <button onclick="updateStok(-1)" class="w-10 h-10 bg-rose-50 text-rose-600 rounded-xl font-black text-xl hover:bg-rose-100">-</button>
-                        <span id="result-qty" class="text-3xl font-black text-slate-800 min-w-[40px] text-center leading-none">0</span>
-                        <button onclick="updateStok(1)" class="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl font-black text-xl hover:bg-emerald-100">+</button>
-                    </div>
-                </div>
-                
-                <button onclick="saveItem()" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold shadow-indigo-200 shadow-xl hover:bg-indigo-700 active:scale-95 transition-all">
-                    💾 SIMPAN DATA
-                </button>
             </div>
+            <button onclick="saveItem()" class="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold shadow-md active:scale-95 transition-all">
+                ✅ Simpan ke Database
+            </button>
+        </div>
 
-            <div class="grid grid-cols-4 gap-2 mb-8">
-                <div class="col-span-3 relative">
-                    <span class="absolute inset-y-0 left-4 flex items-center text-slate-400 text-xs">🔎</span>
-                    <input id="search-input" type="text" oninput="renderList()" placeholder="Cari nama barang..." class="w-full bg-slate-100 border-2 border-transparent focus:border-indigo-300 rounded-2xl py-3 pl-10 pr-4 text-xs font-bold focus:outline-none transition-all shadow-inner">
-                </div>
-                <button onclick="exportToExcel()" class="bg-emerald-500 text-white rounded-2xl font-bold flex items-center justify-center shadow-lg active:scale-95">
-                    📊
-                </button>
+        <div class="grid grid-cols-1 gap-3 mb-8">
+            <button onclick="exportToExcel()" class="bg-emerald-500 hover:bg-emerald-600 text-white py-3.5 rounded-2xl font-bold shadow-lg transition-all flex items-center justify-center gap-2">
+                📊 Download Laporan (Excel)
+            </button>
+        </div>
+
+        <h3 class="font-bold text-gray-800 mb-4 flex justify-between items-center px-1 border-b pb-2">
+            Riwayat Stok
+            <span id="total-badge" class="text-xs bg-indigo-100 px-3 py-1 rounded-full text-indigo-600 font-bold uppercase tracking-wider">0 Item</span>
+        </h3>
+        <div id="inventory-list" class="space-y-3">
             </div>
-
-            <div class="flex justify-between items-center mb-4 px-2">
-                <h3 class="font-black text-slate-700 uppercase tracking-widest text-[10px]">Inventaris Tersimpan</h3>
-                <span id="total-badge" class="text-[9px] bg-slate-200 px-3 py-1 rounded-full font-black text-slate-500 tracking-tighter">0 Item</span>
-            </div>
-            
-            <div id="inventory-list" class="space-y-4">
-                </div>
-        </main>
-
-        <footer class="p-6 text-center text-[9px] text-slate-300 font-bold uppercase tracking-[0.2em]">
-            Stock Master Pro &bull; Local Database
-        </footer>
     </div>
 
     <script>
@@ -91,7 +74,7 @@
         let currentId = "";
         let html5QrCode;
 
-        // 1. DATABASE LOKAL
+        // 1. Inisialisasi Database (IndexedDB)
         const request = indexedDB.open("SmartInventoryDB", 1);
         request.onupgradeneeded = (e) => {
             db = e.target.result;
@@ -102,56 +85,52 @@
             renderList();
         };
 
-        // 2. LOGIKA SCANNER TERUPDATE
+        // 2. LOGIKA SCANNER (UPDATED: Support Barcode Retail)
         async function startScanner() {
-            // Cek protokol keamanan
-            if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-                alert("⚠️ Browser memblokir kamera di HTTP biasa. Silakan gunakan koneksi HTTPS (Upload ke Netlify/GitHub).");
-                return;
-            }
-
-            const btnStart = document.getElementById('btn-start');
-            const labelStart = document.getElementById('label-start');
-            const btnStop = document.getElementById('btn-stop');
-            const placeholder = document.getElementById('scanner-placeholder');
-
-            labelStart.innerText = "⌛ Memulai...";
-            btnStart.disabled = true;
+            document.getElementById('scanner-placeholder').classList.add('opacity-0');
+            document.getElementById('btn-start').classList.add('hidden');
+            document.getElementById('btn-stop').classList.remove('hidden');
 
             if (!html5QrCode) {
                 html5QrCode = new Html5Qrcode("reader");
             }
 
+            // DAFTAR FORMAT BARCODE YANG DIDUKUNG (Retail Ready)
+            const formatsToSupport = [
+                Html5QrcodeSupportedFormats.EAN_13, // Barcode barang supermarket
+                Html5QrcodeSupportedFormats.EAN_8,  // Barcode barang kecil
+                Html5QrcodeSupportedFormats.UPC_A,  // Standar US
+                Html5QrcodeSupportedFormats.UPC_E,
+                Html5QrcodeSupportedFormats.CODE_128, // Barcode logistik/expedisi
+                Html5QrcodeSupportedFormats.QR_CODE   // QR Code biasa
+            ];
+
+            const config = { 
+                fps: 15, 
+                // qrbox dibuat persegi panjang (280x150) agar cocok untuk scan barcode batang
+                qrbox: { width: 280, height: 150 },
+                aspectRatio: 1.0,
+                formatsToSupport: formatsToSupport
+            };
+
             try {
-                const cameras = await Html5Qrcode.getCameras();
-                if (cameras && cameras.length > 0) {
-                    await html5QrCode.start(
-                        { facingMode: "environment" }, 
-                        { fps: 20, qrbox: { width: 250, height: 250 } },
-                        (id) => {
-                            currentId = id;
-                            document.getElementById('info-box').classList.remove('hidden');
-                            document.getElementById('result-id').innerText = "ID: " + id;
-                            loadItemData(id);
-                            stopScanner(); 
-                            if(window.navigator.vibrate) window.navigator.vibrate(100);
-                        }
-                    );
-                    
-                    placeholder.classList.add('opacity-0');
-                    btnStart.classList.add('hidden');
-                    btnStart.disabled = false;
-                    labelStart.innerText = "🔍 Mulai Scan";
-                    btnStop.classList.remove('hidden');
-                } else {
-                    throw "Kamera tidak ditemukan.";
-                }
+                await html5QrCode.start(
+                    { facingMode: "environment" }, 
+                    config,
+                    (id) => {
+                        // JIKA SCAN BERHASIL
+                        currentId = id;
+                        document.getElementById('info-box').classList.remove('hidden');
+                        document.getElementById('result-id').innerText = "KODE: " + id;
+                        loadItemData(id);
+                        stopScanner(); 
+                        if(window.navigator.vibrate) window.navigator.vibrate(80); // Getaran sukses
+                    }
+                );
             } catch (err) {
-                console.error(err);
-                alert("Gagal mengakses kamera. Pastikan izin sudah diberikan.");
+                console.error("Kamera Error:", err);
+                alert("Izin Kamera Diperlukan!");
                 stopScanner();
-                btnStart.disabled = false;
-                labelStart.innerText = "🔍 Mulai Scan";
             }
         }
 
@@ -162,10 +141,9 @@
             document.getElementById('scanner-placeholder').classList.remove('opacity-0');
             document.getElementById('btn-start').classList.remove('hidden');
             document.getElementById('btn-stop').classList.add('hidden');
-            document.getElementById('label-start').innerText = "🔍 Mulai Scan";
         }
 
-        // 3. LOGIKA DATA
+        // 3. Logika Data & Database
         function loadItemData(id) {
             const store = db.transaction(["items"], "readonly").objectStore("items");
             const req = store.get(id);
@@ -173,7 +151,7 @@
                 const item = req.result || { nama: "", qty: 0 };
                 document.getElementById('input-nama').value = item.nama;
                 document.getElementById('result-qty').innerText = item.qty;
-                document.getElementById('input-nama').focus();
+                if(!item.nama) document.getElementById('input-nama').focus();
             };
         }
 
@@ -187,62 +165,50 @@
         function saveItem() {
             const nama = document.getElementById('input-nama').value;
             const qty = parseInt(document.getElementById('result-qty').innerText);
-            if(!nama) return alert("Isi Nama Barang!");
+            if(!nama) return alert("⚠️ Beri nama barang dulu!");
 
             const store = db.transaction(["items"], "readwrite").objectStore("items");
             store.put({ 
                 id: currentId, 
                 nama: nama, 
                 qty: qty, 
-                lastUpdate: new Date().toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) 
+                lastUpdate: new Date().toLocaleString('id-ID') 
             });
             
             renderList();
             document.getElementById('info-box').classList.add('hidden');
-            alert("✅ Tersimpan!");
+            // Reset input
+            document.getElementById('input-nama').value = "";
         }
 
         function renderList() {
             const listContainer = document.getElementById('inventory-list');
             const totalBadge = document.getElementById('total-badge');
-            const searchTerm = document.getElementById('search-input').value.toLowerCase();
             listContainer.innerHTML = "";
             let count = 0;
 
             const store = db.transaction(["items"], "readonly").objectStore("items");
-            store.openCursor().onsuccess = (e) => {
+            store.openCursor(null, "prev").onsuccess = (e) => {
                 const cursor = e.target.result;
                 if (cursor) {
+                    count++;
                     const item = cursor.value;
-                    if (item.nama.toLowerCase().includes(searchTerm) || item.id.toLowerCase().includes(searchTerm)) {
-                        count++;
-                        listContainer.innerHTML += `
-                            <div onclick="editExisting('${item.id}')" class="flex justify-between items-center p-4 bg-white border border-slate-100 rounded-[1.5rem] shadow-sm hover:shadow-md active:scale-95 transition-all cursor-pointer border-l-[6px] border-l-indigo-500">
-                                <div class="overflow-hidden pr-2">
-                                    <p class="font-black text-slate-800 truncate text-sm uppercase tracking-tighter">${item.nama}</p>
-                                    <p class="text-[8px] text-indigo-400 font-bold mt-1">${item.lastUpdate}</p>
-                                </div>
-                                <div class="bg-indigo-50 px-4 py-1 rounded-xl text-center min-w-[60px]">
-                                    <p class="text-lg font-black text-indigo-600">${item.qty}</p>
-                                    <p class="text-[7px] text-indigo-300 font-bold uppercase">Unit</p>
-                                </div>
-                            </div>`;
-                    }
+                    listContainer.innerHTML += `
+                        <div class="flex justify-between items-center p-4 bg-white border border-gray-100 rounded-2xl shadow-sm border-l-4 border-l-indigo-500 animate-in slide-in-from-left duration-300">
+                            <div class="overflow-hidden">
+                                <p class="font-bold text-slate-800 truncate text-sm uppercase">${item.nama}</p>
+                                <p class="text-[10px] text-gray-400 font-mono tracking-tighter">${item.id} • ${item.lastUpdate}</p>
+                            </div>
+                            <div class="text-right ml-4">
+                                <p class="text-xl font-black text-indigo-600">${item.qty}</p>
+                                <p class="text-[9px] font-bold text-gray-300">STOK</p>
+                            </div>
+                        </div>`;
                     cursor.continue();
                 }
                 totalBadge.innerText = count + " Item";
             };
         }
-
-        function editExisting(id) {
-            currentId = id;
-            document.getElementById('info-box').classList.remove('hidden');
-            document.getElementById('result-id').innerText = "ID: " + id;
-            loadItemData(id);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        function closeInfoBox() { document.getElementById('info-box').classList.add('hidden'); }
 
         function exportToExcel() {
             const store = db.transaction(["items"], "readonly").objectStore("items");
@@ -253,21 +219,14 @@
                     allData.push(cursor.value);
                     cursor.continue();
                 } else {
-                    if(allData.length === 0) return alert("Data kosong!");
+                    if(allData.length === 0) return alert("Belum ada data untuk diunduh!");
                     const worksheet = XLSX.utils.json_to_sheet(allData);
                     const workbook = XLSX.utils.book_new();
-                    XLSX.utils.book_append_sheet(workbook, worksheet, "STOK");
-                    XLSX.writeFile(workbook, `Stok_Master_Report.xlsx`);
+                    XLSX.utils.book_append_sheet(workbook, worksheet, "Stok Barang");
+                    XLSX.writeFile(workbook, `Laporan_Stok_${new Date().toLocaleDateString()}.xlsx`);
                 }
             };
         }
     </script>
-
-    <style>
-        #reader__status_span { display: none; }
-        #reader video { object-fit: cover !important; }
-        .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
-    </style>
 </body>
 </html>
