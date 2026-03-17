@@ -59,8 +59,7 @@
             Daftar Stok
             <span id="total-badge" class="text-[10px] bg-gray-200 px-2 py-1 rounded-full text-gray-500">0 Item</span>
         </h3>
-        <div id="inventory-list" class="space-y-3">
-            </div>
+        <div id="inventory-list" class="space-y-3"></div>
     </div>
 
     <script>
@@ -79,26 +78,44 @@
             renderList();
         };
 
-        // 2. SCANNER LOGIC
+        // 2. SCANNER LOGIC (DIPERBAIKI UNTUK BARCODE)
         async function startScanner() {
             document.getElementById('scanner-placeholder').classList.add('hidden');
             document.getElementById('btn-start').classList.add('hidden');
             document.getElementById('btn-stop').classList.remove('hidden');
 
             if (!html5QrCode) {
-                html5QrCode = new Html5Qrcode("reader");
+                // Konfigurasi agar mendukung semua jenis format barcode & QR
+                html5QrCode = new Html5Qrcode("reader", { 
+                    formatsToSupport: [ 
+                        Html5QrcodeSupportedFormats.QR_CODE, 
+                        Html5QrcodeSupportedFormats.EAN_13, 
+                        Html5QrcodeSupportedFormats.EAN_8, 
+                        Html5QrcodeSupportedFormats.CODE_128, 
+                        Html5QrcodeSupportedFormats.CODE_39, 
+                        Html5QrcodeSupportedFormats.UPC_A, 
+                        Html5QrcodeSupportedFormats.UPC_E,
+                        Html5QrcodeSupportedFormats.ITF
+                    ] 
+                });
             }
+
+            const config = { 
+                fps: 15, // Ditingkatkan sedikit agar lebih responsif
+                qrbox: { width: 250, height: 150 }, // Box disesuaikan lebih lebar (khas barcode)
+                aspectRatio: 1.0
+            };
 
             try {
                 await html5QrCode.start(
                     { facingMode: "environment" }, 
-                    { fps: 10, qrbox: 250 },
+                    config,
                     (id) => {
                         currentId = id;
                         document.getElementById('info-box').classList.remove('hidden');
-                        document.getElementById('result-id').innerText = "UID: " + id;
+                        document.getElementById('result-id').innerText = "ID: " + id;
                         loadItemData(id);
-                        stopScanner();
+                        stopScanner(); 
                         if(window.navigator.vibrate) window.navigator.vibrate(100);
                     }
                 );
@@ -128,11 +145,10 @@
             };
         }
 
-        // FUNGSI BARU: Edit dari List
         function editItem(id) {
             currentId = id;
             document.getElementById('info-box').classList.remove('hidden');
-            document.getElementById('result-id').innerText = "UID: " + id;
+            document.getElementById('result-id').innerText = "ID: " + id;
             loadItemData(id);
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -152,7 +168,7 @@
             const store = db.transaction(["items"], "readwrite").objectStore("items");
             store.put({ id: currentId, nama: nama, qty: qty, lastUpdate: new Date().toLocaleString() });
             
-            alert("✅ Data Berhasil Diperbarui!");
+            alert("✅ Data Berhasil Disimpan!");
             renderList();
             document.getElementById('info-box').classList.add('hidden');
         }
@@ -179,7 +195,7 @@
                                 <div class="text-right">
                                     <p class="text-lg font-black text-indigo-600">${item.qty}</p>
                                 </div>
-                                <button onclick="editItem('${item.id}')" class="bg-amber-100 text-amber-600 p-2 rounded-lg hover:bg-amber-200 transition-colors">
+                                <button onclick="editItem('${item.id}')" class="bg-amber-100 text-amber-600 p-2 rounded-lg">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                         <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                                     </svg>
