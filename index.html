@@ -31,8 +31,15 @@
         </div>
         
         <div id="info-box" class="p-4 bg-indigo-50 rounded-xl mb-4 hidden border-2 border-indigo-200">
-            <p class="text-xs text-indigo-400 font-bold uppercase tracking-wider">Mode Input/Edit:</p>
-            <input id="input-nama" type="text" placeholder="Masukkan Nama Barang..." class="w-full bg-transparent text-xl font-bold text-indigo-900 border-b-2 border-indigo-300 focus:outline-none focus:border-indigo-600 mb-2 py-1">
+            <p class="text-xs text-indigo-400 font-bold uppercase tracking-wider">Detail Barang:</p>
+            
+            <input id="input-nama" type="text" placeholder="Nama Barang (Wajib)*" class="w-full bg-transparent text-lg font-bold text-indigo-900 border-b border-indigo-300 focus:outline-none focus:border-indigo-600 mb-2 py-1">
+            
+            <div class="flex gap-2 mb-2">
+                <input id="input-merk" type="text" placeholder="Merk (Opsional)" class="w-1/2 bg-transparent text-sm text-indigo-800 border-b border-indigo-200 focus:outline-none focus:border-indigo-600 py-1">
+                <input id="input-type" type="text" placeholder="Type (Opsional)" class="w-1/2 bg-transparent text-sm text-indigo-800 border-b border-indigo-200 focus:outline-none focus:border-indigo-600 py-1">
+            </div>
+
             <p id="result-id" class="text-[10px] text-gray-400 font-mono"></p>
             
             <div class="flex items-center justify-between mt-4 bg-white p-3 rounded-lg shadow-sm">
@@ -43,6 +50,7 @@
                     <button onclick="updateStok(1)" class="w-10 h-10 bg-green-100 text-green-600 rounded-full font-bold text-xl">+</button>
                 </div>
             </div>
+            
             <div class="flex gap-2 mt-3">
                 <button onclick="saveItem()" class="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-semibold shadow-md active:scale-95 transition-all">Simpan Data</button>
                 <button onclick="document.getElementById('info-box').classList.add('hidden')" class="bg-gray-200 text-gray-600 px-4 py-2 rounded-lg font-semibold">Batal</button>
@@ -67,7 +75,6 @@
         let currentId = "";
         let html5QrCode;
 
-        // 1. Database Initialization
         const request = indexedDB.open("SmartInventoryDB", 1);
         request.onupgradeneeded = (e) => {
             db = e.target.result;
@@ -78,38 +85,28 @@
             renderList();
         };
 
-        // 2. SCANNER LOGIC (DIPERBAIKI UNTUK BARCODE)
         async function startScanner() {
             document.getElementById('scanner-placeholder').classList.add('hidden');
             document.getElementById('btn-start').classList.add('hidden');
             document.getElementById('btn-stop').classList.remove('hidden');
 
             if (!html5QrCode) {
-                // Konfigurasi agar mendukung semua jenis format barcode & QR
                 html5QrCode = new Html5Qrcode("reader", { 
                     formatsToSupport: [ 
                         Html5QrcodeSupportedFormats.QR_CODE, 
                         Html5QrcodeSupportedFormats.EAN_13, 
-                        Html5QrcodeSupportedFormats.EAN_8, 
                         Html5QrcodeSupportedFormats.CODE_128, 
                         Html5QrcodeSupportedFormats.CODE_39, 
-                        Html5QrcodeSupportedFormats.UPC_A, 
-                        Html5QrcodeSupportedFormats.UPC_E,
-                        Html5QrcodeSupportedFormats.ITF
+                        Html5QrcodeSupportedFormats.UPC_A
                     ] 
                 });
             }
 
-            const config = { 
-                fps: 15, // Ditingkatkan sedikit agar lebih responsif
-                qrbox: { width: 250, height: 150 }, // Box disesuaikan lebih lebar (khas barcode)
-                aspectRatio: 1.0
-            };
+            const config = { fps: 15, qrbox: { width: 250, height: 150 } };
 
             try {
                 await html5QrCode.start(
-                    { facingMode: "environment" }, 
-                    config,
+                    { facingMode: "environment" }, config,
                     (id) => {
                         currentId = id;
                         document.getElementById('info-box').classList.remove('hidden');
@@ -126,22 +123,21 @@
         }
 
         async function stopScanner() {
-            if (html5QrCode && html5QrCode.isScanning) {
-                await html5QrCode.stop();
-            }
+            if (html5QrCode && html5QrCode.isScanning) { await html5QrCode.stop(); }
             document.getElementById('scanner-placeholder').classList.remove('hidden');
             document.getElementById('btn-start').classList.remove('hidden');
             document.getElementById('btn-stop').classList.add('hidden');
         }
 
-        // 3. Data Logic
         function loadItemData(id) {
             const store = db.transaction(["items"], "readonly").objectStore("items");
             const req = store.get(id);
             req.onsuccess = () => {
-                const item = req.result || { nama: "", qty: 0 };
-                document.getElementById('input-nama').value = item.nama;
-                document.getElementById('result-qty').innerText = item.qty;
+                const item = req.result || { nama: "", merk: "", type: "", qty: 0 };
+                document.getElementById('input-nama').value = item.nama || "";
+                document.getElementById('input-merk').value = item.merk || "";
+                document.getElementById('input-type').value = item.type || "";
+                document.getElementById('result-qty').innerText = item.qty || 0;
             };
         }
 
@@ -162,13 +158,23 @@
 
         function saveItem() {
             const nama = document.getElementById('input-nama').value;
+            const merk = document.getElementById('input-merk').value;
+            const type = document.getElementById('input-type').value;
             const qty = parseInt(document.getElementById('result-qty').innerText);
+            
             if(!nama) return alert("Isi nama barang!");
 
             const store = db.transaction(["items"], "readwrite").objectStore("items");
-            store.put({ id: currentId, nama: nama, qty: qty, lastUpdate: new Date().toLocaleString() });
+            store.put({ 
+                id: currentId, 
+                nama: nama, 
+                merk: merk, 
+                type: type, 
+                qty: qty, 
+                lastUpdate: new Date().toLocaleString() 
+            });
             
-            alert("✅ Data Berhasil Disimpan!");
+            alert("✅ Berhasil disimpan!");
             renderList();
             document.getElementById('info-box').classList.add('hidden');
         }
@@ -185,10 +191,13 @@
                 if (cursor) {
                     count++;
                     const item = cursor.value;
+                    const detail = (item.merk || item.type) ? `<p class="text-[10px] text-gray-500 uppercase">${item.merk} ${item.type}</p>` : "";
+                    
                     listContainer.innerHTML += `
                         <div class="flex justify-between items-center p-3 bg-white border border-gray-100 rounded-xl shadow-sm border-l-4 border-l-indigo-500">
                             <div class="overflow-hidden flex-1">
                                 <p class="font-bold text-gray-800 truncate text-sm">${item.nama}</p>
+                                ${detail}
                                 <p class="text-[10px] text-gray-400 font-mono">${item.id}</p>
                             </div>
                             <div class="flex items-center gap-3">
